@@ -8,6 +8,20 @@
 #define GRIDDIM 32
 #define BLOCKDIM 1024 //32*32
 
+extern "C" void TOF_dist_projection(float *proj_value, const float *image, const float *tof_value,
+                            const float *x1l, const float *y1l, const float *x1r, const float *y1r,
+                            const float *x2l, const float *y2l, const float *x2r, const float *y2r,
+                            const float time_resolution, const float dx, const float dy,
+                            const int nx, const int ny, const int event_num)
+
+extern "C" void TOF_dist_backprojection(float *image_bp, const float *proj_value, const float *tof_value,
+                            const float *x1l, const float *y1l, const float *x1r, const float *y1r,
+                            const float *x2l, const float *y2l, const float *x2r, const float *y2r,
+                            const float time_resolution, const float dx, const float dy,
+                            const int nx, const int ny, const int event_num)
+
+extern "C" void TOF_filter(float *filter_v, const float nx, const ny, const float time_resolution)
+
 // define TOF-dist-proj
 __device__ void TOF_dist_proj(float proj_value, const float *image, const float tof_value,
                               const float x1l, const float y1l, const float x1r, const float y1r,
