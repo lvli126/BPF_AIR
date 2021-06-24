@@ -9,10 +9,10 @@
 #define BLOCKDIM 1024 //32*32
 
 
-extern "C" void TOF_filter(float *filter_v, const float nx, const int ny, const float time_resolution);
+extern "C" void TOF_filter(float *filter_v, const int nx, const int ny, const float time_resolution);
 
 
-__device__ void TOF_filter_in_freq(float *filter_v, const int ix, const int iy, const float nx, const float ny, const float time_resolution)
+__device__ void TOF_filter_in_freq(float *filter_v, const int ix, const int iy, const int nx, const int ny, const float time_resolution)
 {
     const float nx2 = nx / 2;
     const float ny2 = ny / 2;
@@ -25,7 +25,7 @@ __device__ void TOF_filter_in_freq(float *filter_v, const int ix, const int iy, 
 
 
 
-__global__ void  TOF_filter_in_freq_kernel(float *filter_v, const float nx, const float ny, const float time_resolution)
+__global__ void  TOF_filter_in_freq_kernel(float *filter_v, const int nx, const float ny, const float time_resolution)
 {
     int step = blockDim.x * gridDim.x;
     for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < nx * ny; idx += step) 
@@ -38,7 +38,7 @@ __global__ void  TOF_filter_in_freq_kernel(float *filter_v, const float nx, cons
 
 
 
-void TOF_filter(float *filter_v, const float nx, const int ny, const float time_resolution)
+void TOF_filter(float *filter_v, const int nx, const int ny, const float time_resolution)
 {
     float *filter_v_d;
     cudaMalloc(&filter_v_d, nx * ny * sizeof(float));
