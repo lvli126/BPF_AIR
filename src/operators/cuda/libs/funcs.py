@@ -2,7 +2,7 @@ import ctypes
 from ctypes import *
 
 def get_TOF_dist_backprojection():
-    dll = ctypes.CDLL("bproj.so")
+    dll = ctypes.CDLL('./libs/bproj.so', mode=ctypes.RTLD_GLOBAL)
     func = dll.TOF_dist_backprojection
     func.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float),
                      POINTER(c_float), POINTER(c_float), POINTER(c_float),POINTER(c_float),
@@ -12,7 +12,7 @@ def get_TOF_dist_backprojection():
     return func
 
 def get_TOF_dist_projection():
-    dll = ctypes.CDLL("proj.so")
+    dll = ctypes.CDLL("./libs/proj.so", mode=ctypes.RTLD_GLOBAL)
     func = dll.TOF_dist_projection
     func.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float),
                      POINTER(c_float), POINTER(c_float), POINTER(c_float),POINTER(c_float),
@@ -22,9 +22,9 @@ def get_TOF_dist_projection():
     return func
 
 def get_TOF_filter():
-    dll = ctypes.CDLL("filter.so")
+    dll = ctypes.CDLL("./libs/filter.so", mode=ctypes.RTLD_GLOBAL)
     func = dll.TOF_filter
-    func.argtypes(POINTER(c_float), c_uint32, c_uint32, c_float)
+    func.argtypes = [POINTER(c_float), c_uint32, c_uint32, c_float]
     return func
 
 # TOF_dist_projection(float *proj_value, const float *image, const float *tof_value,

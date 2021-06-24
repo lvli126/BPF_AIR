@@ -18,7 +18,7 @@ def TOF_dist_backprojection(listmode: np.ndarray, time_resolution: np.float32, i
     # 将变量转为c程序需要的格式
     x_bp = image.ctypes.data_as(POINTER(c_float))
     proj_value = proj_v.ctypes.data_as(POINTER(c_float))
-    tof_value = listmode[8,:].ctypes.data_as(POINTER(c_float))
+    tof_value = (2*listmode[8,:]).ctypes.data_as(POINTER(c_float))
     x1l = listmode[0,:].ctypes.data_as(POINTER(c_float))
     y1l = listmode[1,:].ctypes.data_as(POINTER(c_float))
     x1r = listmode[2,:].ctypes.data_as(POINTER(c_float))
@@ -32,6 +32,7 @@ def TOF_dist_backprojection(listmode: np.ndarray, time_resolution: np.float32, i
     nx,ny = np.uint32(image_grid[0]), np.uint32(image_grid[1])
     event_num = np.uint32(event_num)
 
+    
     # 运行函数
     __get_TOF_dist_backprojection(x_bp, proj_value, tof_value, 
                                     x1l,y1l, x1r, y1r, x2l,y2l,x2r,y2r, 
@@ -48,7 +49,7 @@ def TOF_dist_projection(image: np.ndarray, listmode: np.ndarray, time_resolution
 
     x_p = image.ctypes.data_as(POINTER(c_float))
     proj_value = proj_v.ctypes.data_as(POINTER(c_float))
-    tof_value = listmode[8,:].ctypes.data_as(POINTER(c_float))
+    tof_value = (2*listmode[8,:]).ctypes.data_as(POINTER(c_float))
     x1l = listmode[0,:].ctypes.data_as(POINTER(c_float))
     y1l = listmode[1,:].ctypes.data_as(POINTER(c_float))
     x1r = listmode[2,:].ctypes.data_as(POINTER(c_float))
@@ -78,20 +79,11 @@ def TOF_filter(nx: np.uint32, ny: np.uint32, time_resolution: np.float32):
     return filter_v
 
 
-
-
-
-
-# TOF_dist_projection(float *proj_value, const float *image, const float *tof_value,
-#                             const float *x1l, const float *y1l, const float *x1r, const float *y1r,
-#                             const float *x2l, const float *y2l, const float *x2r, const float *y2r,
-#                             const float time_resolution, const float dx, const float dy,
-#                             const int nx, const int ny, const int event_num)
-
-# TOF_dist_backprojection(float *image_bp, const float *proj_value, const float *tof_value,
-#                             const float *x1l, const float *y1l, const float *x1r, const float *y1r,
-#                             const float *x2l, const float *y2l, const float *x2r, const float *y2r,
-#                             const float time_resolution, const float dx, const float dy,
-#                             const int nx, const int ny, const int event_num)
-
-# TOF_filter(float *filter_v, const int nx, const int ny, const float time_resolution)
+if __name__ == '__main__':
+    file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
+    listmode = np.load(file_path)
+    time_resolution = 200
+    image_grid = np.array([200,200])
+    pixel_size = np.array([3.125,3.125])
+    image_bp = TOF_dist_backprojection(listmode, time_resolution, image_grid, pixel_size)
+    np.save("/home/lyuli/gitpackages/image_bp.npy", image_bp)
