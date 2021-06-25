@@ -2,7 +2,7 @@ import numpy as np
 import math 
 import ctypes
 from ctypes import *
-from libs.funcs import get_TOF_dist_backprojection, get_TOF_dist_projection, get_TOF_filter
+from funcs import get_TOF_dist_backprojection, get_TOF_dist_projection, get_TOF_filter
 
 __get_TOF_dist_backprojection = get_TOF_dist_backprojection()
 __get_TOF_dist_projection = get_TOF_dist_projection()
@@ -31,7 +31,7 @@ def TOF_dist_backprojection(listmode: np.ndarray, time_resolution: np.float32, i
     dx, dy = float(pixel_size[0]), float(pixel_size[1])
     nx,ny = np.uint32(image_grid[0]), np.uint32(image_grid[1])
     event_num = np.uint32(event_num)
-
+    
     
     # 运行函数
     __get_TOF_dist_backprojection(x_bp, proj_value, tof_value, 
@@ -39,6 +39,7 @@ def TOF_dist_backprojection(listmode: np.ndarray, time_resolution: np.float32, i
                                     time_resolution, dx, dy, nx, ny, event_num)
     
     image = image.reshape((int(nx), int(ny)))
+    # x_bp = x_bp.reshape(int(nx),int(ny))
     return image
 
 
@@ -80,10 +81,11 @@ def TOF_filter(nx: np.uint32, ny: np.uint32, time_resolution: np.float32):
 
 
 if __name__ == '__main__':
-    file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
+    # file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
+    file_path = "/home/lvli/Documents/gitpackages/test/lors_200ps.npy"
     listmode = np.load(file_path)
     time_resolution = 200
     image_grid = np.array([200,200])
     pixel_size = np.array([3.125,3.125])
     image_bp = TOF_dist_backprojection(listmode, time_resolution, image_grid, pixel_size)
-    np.save("/home/lyuli/gitpackages/image_bp.npy", image_bp)
+    np.save("/home/lvli/Documents/gitpackages/test/image_bp.npy", image_bp)
