@@ -31,22 +31,22 @@ __device__ void TOF_dist_bp(float *image_bp, const float proj_value, const float
     const float x2c = (x2l + x2r) / 2;
     const float y2c = (y2l + y2r) / 2;
     const float L = sqrtf((x1c - x2c) * (x1c - x2c) + (y1c - y2c) * (y1c - y2c));
-    const float ratio1 = (1 - tof_value / L) / 2;
+    const float ratio1 = (1 - (tof_value / L)) / 2;
 
-    const float xd = x1c - x2c;
-    const float yd = y1c - y2c;
-    float d2_tof, w_tof;
-    if (abs(xd) > abs(yd))
+    
+    
+    if (abs(x1c - x2c) > abs(y1c - y2c))
     {
         for (int ix = 0; ix < nx; ix++)
         {
-            float xc = (ix - nx2+0.5) * dx;
+            float xc = (ix - nx2 + 0.5) * dx;
             float tof_bin = dx;
+            float d2_tof, w_tof;
             
             if (tof_sigma > 0)
             {
                 d2_tof = ((xc-x1c) / (x2c-x1c) - ratio1)*L;
-                if (d2_tof <=3 * tof_sigma)
+                if (d2_tof <= 3 * tof_sigma)
                 {
                     w_tof = expf(-0.5 * d2_tof * d2_tof / tof_sigma_2) / sqrtf(2.0 * PI * tof_sigma_2) * tof_bin;
                 }
@@ -71,7 +71,7 @@ __device__ void TOF_dist_bp(float *image_bp, const float proj_value, const float
             int cy1 = (int)floorf(yy1/dy);
             int cy2 = (int)floorf(yy2/dy);
 
-            for (int iy=MAX(0, cy1); iy < MIN(ny, cy2+1); iy++)
+            for (int iy=(int)MAX(0, cy1); iy < (int)MIN(ny, cy2+1); iy++)
             {
                 float dist_w = (MIN((iy+1) * dy,yy2) - MAX(iy * dy,yy1)) / dy;
                 atomicAdd(image_bp + (ix + iy * nx), proj_value * dist_w * w_tof);
@@ -86,10 +86,12 @@ __device__ void TOF_dist_bp(float *image_bp, const float proj_value, const float
         {
             float yc = (iy - ny2 + 0.5) * dy;
             float tof_bin = dy;
+            float d2_tof, w_tof;
+
             if (tof_sigma > 0)
             {
-                d2_tof = ((yc-y1c) / (y2c-y1c) - ratio1) * L;
-                if (d2_tof <=3 * tof_sigma)
+                d2_tof = (((yc-y1c) / (y2c-y1c)) - ratio1) * L;
+                if (d2_tof <= 3 * tof_sigma)
                 {
                     w_tof = expf(-0.5 * d2_tof * d2_tof / tof_sigma_2) / sqrtf(2.0 * PI * tof_sigma_2) * tof_bin;
                 }
@@ -115,7 +117,7 @@ __device__ void TOF_dist_bp(float *image_bp, const float proj_value, const float
             float cx2 = (int)floorf(xx2/dx);
 
             
-            for (int ix=MAX(0, cx1); ix < MIN(nx, cx2+1); ix++)
+            for (int ix=(int)MAX(0, cx1); ix < (int)MIN(nx, cx2+1); ix++)
             {
                 float dist_w = (MIN((ix+1) * dx,xx2) - MAX(ix * dx,xx1))/dx;
                 atomicAdd(image_bp + (ix + iy * nx), proj_value * dist_w * w_tof);

@@ -8,7 +8,7 @@
             "name": "CUDA C++: Launch",
             "type": "cuda-gdb",
             "request": "launch",
-            "program": "${workspaceFolder}/src/operators/cuda/bproj.cu"
+            "program": "${workspaceFolder}/src/operators/cuda/bproj.so"
         }
     ]
 }
