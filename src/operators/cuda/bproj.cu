@@ -146,6 +146,8 @@ __global__ void TOF_dist_bp_kernel(float *image_bp, const float *proj_value, con
 
 }
 
+
+
 void TOF_dist_backprojection(float *image_bp, const float *proj_value, const float *tof_value,
                             const float *x1l, const float *y1l, const float *x1r, const float *y1r,
                             const float *x2l, const float *y2l, const float *x2r, const float *y2r,
@@ -171,11 +173,11 @@ void TOF_dist_backprojection(float *image_bp, const float *proj_value, const flo
     cudaMemcpy(x1l_d, x1l, event_num * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(y1l_d, y1l, event_num * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(x1r_d, x1r, event_num * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(y1r_d, x1r, event_num * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(y1r_d, y1r, event_num * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(x2l_d, x2l, event_num * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(y2l_d, y2l, event_num * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(x2r_d, x2r, event_num * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(y2r_d, x2r, event_num * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(y2r_d, y2r, event_num * sizeof(float), cudaMemcpyHostToDevice);
     // 执行kernel
     TOF_dist_bp_kernel<<<GRIDDIM, BLOCKDIM>>>(image_bp_d, proj_value_d, tof_value_d, x1l_d, y1l_d, x1r_d, y1r_d,
                                             x2l_d, y2l_d, x2r_d, y2r_d, time_resolution, dx, dy, nx, ny, event_num);
@@ -196,3 +198,5 @@ void TOF_dist_backprojection(float *image_bp, const float *proj_value, const flo
     cudaFree(x2r_d);
     cudaFree(y2r_d);
 }
+
+

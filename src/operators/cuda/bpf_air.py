@@ -81,11 +81,15 @@ def TOF_filter(nx: np.uint32, ny: np.uint32, time_resolution: np.float32):
 
 
 if __name__ == '__main__':
+    import time
     # file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
     file_path = "/home/lvli/Documents/gitpackages/test/lors_200ps.npy"
-    listmode = np.load(file_path)[:1,:]
+    listmode = np.load(file_path)[:500000,:]
     time_resolution = 200
     image_grid = np.array([200,200])
     pixel_size = np.array([3.125,3.125])
+    start = time.time()
     image_bp = TOF_dist_backprojection(listmode, time_resolution, image_grid, pixel_size)
+    end = time.time()
+    print(end-start)
     np.save("/home/lvli/Documents/gitpackages/test/image_bp.npy", image_bp)
