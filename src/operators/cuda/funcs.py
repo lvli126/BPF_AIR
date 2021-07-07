@@ -39,4 +39,4 @@ def get_TOF_filter():
 #                             const float time_resolution, const float dx, const float dy,
 #                             const int nx, const int ny, const int event_num)
 
-# TOF_filter(float *filter_v, const int nx, const int ny, const float time_resolution)
+# TOF_filter(float *filter_v, const int nx, const int ny, const float tof_sigma)
