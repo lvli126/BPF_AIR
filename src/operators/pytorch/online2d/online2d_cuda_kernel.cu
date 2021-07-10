@@ -1,7 +1,6 @@
 #include <cuda.h>
-#include <torch/extension.h>
-
 #include <cuda_runtime.h>
+#include <torch/extension.h>
 #include <ATen/ATen.h> // C++ front end的底层库，aten是一个tensor库，可以将数组封装成一个tensor类
 #include <math.h>
 #include <vector>
@@ -24,7 +23,7 @@ __device__ void TOF_dist_proj(
     const float x1l, const float y1l, const float x1r, const float y1r,
     const float x2l, const float y2l, const float x2r, const float y2r,
     const float time_resolution, const float dx, const float dy,
-    const int nx, const int n#define abs(x) (x > 0 ? x : -(x))
+    const int nx, const int ny, const int event_num)
 
 {
     const float nx2 = nx/2;
@@ -77,7 +76,7 @@ __device__ void TOF_dist_proj(
             for (int iy = MAX(0, cy1); iy < MIN(ny, cy2+1); iy++)
             {
                 float dist_w = (fminf((iy+1) * dy,yy2)-fmaxf(iy * dy, yy1)) / (yy2-yy1);
-                atomicAdd(proj_value, text1Dfetch(text_memory_image, ix + nx * iy) * dist_w * w_tof);
+                atomicAdd(proj_value, tex1Dfetch(text_memory_image, ix + nx * iy) * dist_w * w_tof);
             }
         }
     }
@@ -120,7 +119,7 @@ __device__ void TOF_dist_proj(
             for (int ix= MAX(0, cx1); ix < MIN(nx, cx2+1); ix++)
             {
                 float dist_w = (fminf((ix+1)*dx,xx2) - fmaxf(ix*dx,xx1))/(xx2-xx1);
-                atomicAdd(proj_value, text1Dfetch(text_memory_image, ix + nx * iy) * dist_w * w_tof);
+                atomicAdd(proj_value, tex1Dfetch(text_memory_image, ix + nx * iy) * dist_w * w_tof);
             }
         }
 
@@ -143,7 +142,7 @@ __global__ void TOF_dist_proj_kernel(
     for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < event_num; idx += step)
     {
         TOF_dist_proj(proj_value+idx, tof_value[idx], x1l[idx], y1l[idx], x1r[idx], y1r[idx],
-                    x2l[idx], y2l[idx], x2r[idx], y2r[idx], time_resolution, dx, dy, nx, ny);
+                    x2l[idx], y2l[idx], x2r[idx], y2r[idx], time_resolution, dx, dy, nx, ny, event_num);
     }
 }
 
@@ -163,10 +162,10 @@ torch::Tensor TOF_dist_proj_cuda_batchs(
 
     for (int ibatch = 0; ibatch < nb_batchs; ibatch++)
     {
-        cudaBindTexture(0, text_memory_image, image_batchs.data<scalar_t>()+ibatch*nx*ny,
+        cudaBindTexture(0, text_memory_image, image_batchs.data<float>()+ibatch*nx*ny,
                     nx*ny*sizeof(float)); //将image绑定在纹理内存中，只读，偏移量为0
         dim3 dimBlock = BLOCKDIM;
-        dim3 dimGrid = (event_num -1)/dimBlock + 1;
+        dim3 dimGrid = (event_num -1)/dimBlock.x + 1;
 
         AT_DISPATCH_FLOATING_TYPES(
             at::ScalarType::Float,
@@ -195,7 +194,7 @@ torch::Tensor TOF_dist_proj_cuda_batchs(
 }
 
 
-template <scalar_t>
+template <typename scalar_t>
 __device__ void TOF_dist_bp(
     scalar_t *image_bp, 
     const float proj_value,
@@ -257,7 +256,7 @@ __device__ void TOF_dist_bp(
             for (int iy=(int)MAX(0, cy1); iy < (int)MIN(ny, cy2+1); iy++)
             {
                 float dist_w = (MIN((iy+1) * dy,yy2) - MAX(iy * dy,yy1)) / dy;
-                atomicAdd(image_bp + (ix + iy * nx), text_memory_proj * dist_w * w_tof);
+                atomicAdd(image_bp + (ix + iy * nx), proj_value * dist_w * w_tof);
             }
 
         }
@@ -312,7 +311,7 @@ __device__ void TOF_dist_bp(
 }
 
 
-template <scalar_t>
+template <typename scalar_t>
 __global__ void TOF_dist_bp_kernel(
     scalar_t *image_bp, 
     // const scalar_t *proj_value, 
@@ -325,7 +324,7 @@ __global__ void TOF_dist_bp_kernel(
     int step = blockDim.x * gridDim.x;
     for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < event_num; idx += step)
     {
-        TOF_dist_bp(image_bp, text1Dfetch(text_memory_proj,idx), tof_value[idx],
+        TOF_dist_bp(image_bp, tex1Dfetch(text_memory_proj,idx), tof_value[idx],
                     x1l[idx], y1l[idx], x1r[idx], y1r[idx],
                     x2l[idx], y2l[idx], x2r[idx], y2r[idx],
                     time_resolution, dx, dy,
@@ -347,11 +346,11 @@ torch::Tensor TOF_dist_bproj_cuda_batchs(
     torch::Tensor back_image_batchs = torch::zeros({nb_batchs, nb_channels, nx, ny}, proj_batchs.type());
 
     dim3 dimBlock = BLOCKDIM;
-    dim3 dimGrid = (nx * ny -1) / dimBlock +1;
+    dim3 dimGrid = (nx * ny -1) / dimBlock.x +1;
 
     for (int ibatch = 0; ibatch < nb_batchs; ibatch++)
     {
-        cudaBindTexture(0, text_memory_proj, proj_batchs.data<scalar_t>() + ibatch * event_num *1,
+        cudaBindTexture(0, text_memory_proj, proj_batchs.data<float>() + ibatch * event_num *1,
                         event_num * sizeof(float));
         AT_DISPATCH_FLOATING_TYPES(
             at::ScalarType::Float,
@@ -369,9 +368,9 @@ torch::Tensor TOF_dist_bproj_cuda_batchs(
                     x2r_batchs.data<scalar_t>()+ibatch*nx*ny,
                     y2r_batchs.data<scalar_t>()+ibatch*nx*ny,
                     time_resolution,
-                    dx,dy,nx,ny,event_num)
+                    dx,dy,nx,ny,event_num);
 
-            });
+            }));
         cudaDeviceSynchronize();
         cudaUnbindTexture(text_memory_proj);
     }
