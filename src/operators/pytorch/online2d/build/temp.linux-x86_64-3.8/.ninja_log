@@ -1,0 +1,3 @@
+# ninja log v5
+1	22442	1626097873417937560	/home/lyuli/gitpackages/BPF_AIR/src/operators/pytorch/online2d/build/temp.linux-x86_64-3.8/online2d_cuda.o	c15d94e831b92440
+1	38188	1626097889166649900	/home/lyuli/gitpackages/BPF_AIR/src/operators/pytorch/online2d/build/temp.linux-x86_64-3.8/online2d_cuda_kernel.o	8c06112394e6d3b7
