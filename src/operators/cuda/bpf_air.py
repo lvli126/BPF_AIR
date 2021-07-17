@@ -37,10 +37,10 @@ def TOF_dist_projection(image: np.ndarray, listmode: np.ndarray, time_resolution
 
     return proj_v
 
-def TOF_dist_backprojection(listmode: np.ndarray, time_resolution: np.float32, image_grid: np.ndarray, pixel_size: np.ndarray):
+def TOF_dist_backprojection(proj_v: np.ndarray, listmode: np.ndarray, time_resolution: np.float32, image_grid: np.ndarray, pixel_size: np.ndarray):
     # 生成变量
     event_num = listmode.shape[0]
-    proj_v = np.ones((event_num,1), dtype= np.float32)
+    # proj_v = np.ones((event_num,1), dtype= np.float32)
     total_size = image_grid[0] * image_grid[1]
     image = np.zeros((total_size,1),dtype= np.float32)
 
@@ -109,19 +109,26 @@ def TOF_BPF(listmode: np.ndarray, time_resolution: np.float32, image_grid: np.nd
 
 if __name__ == '__main__':
     import time
-    # file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
-    file_path = "/home/lvli/Documents/gitpackages/test/lors_200ps.npy"
-    listmode = np.load(file_path)[:500000,:]
+    file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
+    # file_path = "/home/lvli/Documents/gitpackages/test/lors_200ps.npy"
+    listmode = np.load(file_path)[:50000,:]
     time_resolution = 200
     image_grid = np.array([200,200])
     pixel_size = np.array([3.125,3.125])
     start = time.time()
     tof_sigma = time_resolution * 0.3 / 2 / 2.355 / pixel_size[0]
-    filters = TOF_filter(image_grid[0],image_grid[1], tof_sigma)
-    image_bp = TOF_dist_backprojection(listmode, time_resolution, image_grid, pixel_size)
-    image_recon = TOF_BPF(listmode, time_resolution, image_grid, pixel_size)
+    # filters = TOF_filter(image_grid[0],image_grid[1], tof_sigma)
+    image_bp = np.zeros((10,200,200))
+    proj_value = np.ones((11,listmode.shape[0]))
+    for i in range(10):
+        image_bp[i,:,:] = TOF_dist_backprojection(proj_value[i], listmode, time_resolution, image_grid, pixel_size)
+        proj_value[i+1,:] =  TOF_dist_projection(image_bp[i], listmode, time_resolution, pixel_size)[:,0]
+    # image_recon = TOF_BPF(listmode, time_resolution, image_grid, pixel_size)
     end = time.time()
     print(end-start)
-    np.save("/home/lvli/Documents/gitpackages/test/filters.npy", filters)
-    np.save("/home/lvli/Documents/gitpackages/test/image_bp.npy", image_bp)
-    np.save("/home/lvli/Documents/gitpackages/test/image_recon.npy", image_recon)
+    np.save("/home/lyuli/gitpackages/test_data/bp_cuda.npy", image_bp)
+    np.save("/home/lyuli/gitpackages/test_data/proj_cuda.npy", proj_value)
+
+    # np.save("/home/lvli/Documents/gitpackages/test/filters.npy", filters)
+    # np.save("/home/lvli/Documents/gitpackages/test/image_bp.npy", image_bp)
+    # np.save("/home/lvli/Documents/gitpackages/test/image_recon.npy", image_recon)

@@ -2,7 +2,7 @@ import ctypes
 from ctypes import *
 
 def get_TOF_dist_backprojection():
-    dll = ctypes.CDLL('bproj.so', mode=ctypes.RTLD_GLOBAL)
+    dll = ctypes.CDLL('./bproj.so', mode=ctypes.RTLD_GLOBAL)
     func = dll.TOF_dist_backprojection
     func.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float),
                      POINTER(c_float), POINTER(c_float), POINTER(c_float),POINTER(c_float),

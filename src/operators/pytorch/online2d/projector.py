@@ -168,6 +168,8 @@ class BPF(torch.nn.Module):
         self.nx = torch.tensor(nx, device=cuda_device)
         self.ny = torch.tensor(ny, device=cuda_device)
         self.event_num =  torch.tensor(event_num, device=cuda_device)
+        self.device = cuda_device
+        # print(cuda_device)
 
     
     def forward(self, projection_data):
@@ -182,14 +184,15 @@ class BPF(torch.nn.Module):
         # define filter
         tof_sigma = self.time_resolution * 0.3 / 2 / 2.355 / self.dx
         nx2 =  self.nx / 2
-        x_ = y_ = torch.linspace(-nx2 + 0.5, nx2 - 0.5, self.nx ) / nx2# 与ramp一样，将采样点用物理尺寸标准化
+        # print(nx2.device)
+        x_ = y_ = torch.linspace(-nx2 + 0.5, nx2 - 0.5, self.nx , device = self.device) / nx2# 与ramp一样，将采样点用物理尺寸标准化
         xx, yy = torch.meshgrid(x_, y_)
         w0 = torch.pow(xx, 2) + torch.pow(yy, 2) # 频域w的平方
         tmp = w0 * torch.pow((torch.tensor(math.pi) * tof_sigma), 2) 
-        freq_filter = torch.special.i0e(0,tmp)**(-1)#直接用iv函数容易出现math range error，如下一行的ive代替，ive为指数修正的0阶第一类贝塞尔函数
+        freq_filter = torch.special.i0e(tmp)**(-1)#直接用iv函数容易出现math range error，如下一行的ive代替，ive为指数修正的0阶第一类贝塞尔函数
         
         # filtering and ifft
-        image = fft.ifft2(fft.ifftshift(freq_filter * freq_back_image * self.nx, dim=(-2,-1)), dim=(-2, -1))
+        image = fft.ifft2(fft.ifftshift(freq_filter * freq_back_image * self.nx, dim=(-2,-1)), dim=(-2, -1)).real
         return image
 
 
