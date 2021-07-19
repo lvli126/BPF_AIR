@@ -5,3 +5,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# compiler file
+*.egg-info/
+build/
+dist/

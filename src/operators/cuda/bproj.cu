@@ -8,7 +8,6 @@
 #define GRIDDIM 32
 #define BLOCKDIM 1024 //32*32
 
-
 extern "C" void TOF_dist_backprojection(float *image_bp, const float *proj_value, const float *tof_value,
                             const float *x1l, const float *y1l, const float *x1r, const float *y1r,
                             const float *x2l, const float *y2l, const float *x2r, const float *y2r,
@@ -199,4 +198,4 @@ void TOF_dist_backprojection(float *image_bp, const float *proj_value, const flo
     cudaFree(y2r_d);
 }
 
-
+//nvcc -Xcompiler -fPIC -shared -lcudart -o proj.so proj.cu

@@ -14,7 +14,7 @@ __get_TOF_dist_projection = get_TOF_dist_projection()
 def TOF_dist_projection(image: np.ndarray, listmode: np.ndarray, time_resolution: np.float32, pixel_size: np.ndarray):
 
     event_num = np.uint32(listmode.shape[0])
-    proj_v = np.zeros((event_num,1), dtype= np.float32)
+    proj_v = np.zeros(event_num, dtype= np.float32)
 
     x_p = image.ctypes.data_as(POINTER(c_float))
     proj_value = proj_v.ctypes.data_as(POINTER(c_float))
@@ -112,22 +112,38 @@ if __name__ == '__main__':
     file_path = "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
     # file_path = "/home/lvli/Documents/gitpackages/test/lors_200ps.npy"
     listmode = np.load(file_path)[:50000,:]
+    emap = np.fromfile("/home/lyuli/bpf-learning/PET_2nd_simu/emap.bin",dtype=np.float32).reshape(200,200)
     time_resolution = 200
     image_grid = np.array([200,200])
     pixel_size = np.array([3.125,3.125])
     start = time.time()
     tof_sigma = time_resolution * 0.3 / 2 / 2.355 / pixel_size[0]
+    measured_proj = np.ones(listmode.shape[0])
     # filters = TOF_filter(image_grid[0],image_grid[1], tof_sigma)
-    image_bp = np.zeros((10,200,200))
-    proj_value = np.ones((11,listmode.shape[0]))
-    for i in range(10):
-        image_bp[i,:,:] = TOF_dist_backprojection(proj_value[i], listmode, time_resolution, image_grid, pixel_size)
-        proj_value[i+1,:] =  TOF_dist_projection(image_bp[i], listmode, time_resolution, pixel_size)[:,0]
-    # image_recon = TOF_BPF(listmode, time_resolution, image_grid, pixel_size)
-    end = time.time()
-    print(end-start)
-    np.save("/home/lyuli/gitpackages/test_data/bp_cuda.npy", image_bp)
+    
+    # test bp
+    # image_bp = TOF_dist_backprojection(measured_proj, listmode, time_resolution, image_grid, pixel_size)
+    
+    # test_proj
+    one_map = np.ones((200,200))
+    proj_value =  TOF_dist_projection(one_map, listmode, time_resolution, pixel_size)
     np.save("/home/lyuli/gitpackages/test_data/proj_cuda.npy", proj_value)
+    #     
+    # test mlem
+    # iter_num = 4
+    # image_bp = np.ones((iter_num+1,200,200))
+    # proj_value = np.zeros((iter_num,listmode.shape[0]))
+    
+    # for i in range(iter_num):
+    #     proj_value[i,:] =  TOF_dist_projection(image_bp[i,:,:], listmode, time_resolution, pixel_size)[:,0]
+    #     proj_ratio = np.divide(measured_proj,proj_value[i,:], out=np.zeros(listmode.shape[0]), where=proj_value[i,:]!=0)
+    #     bp_ratio = TOF_dist_backprojection(proj_ratio, listmode, time_resolution, image_grid, pixel_size)
+    #     image_bp[i+1,:,:] = image_bp[i,:,:] / emap * bp_ratio
+    # # image_recon = TOF_BPF(listmode, time_resolution, image_grid, pixel_size)
+    # end = time.time()
+    # print(end-start)
+    # np.save("/home/lyuli/gitpackages/test_data/bp_cuda.npy", image_bp)
+    # np.save("/home/lyuli/gitpackages/test_data/proj_cuda.npy", proj_value)
 
     # np.save("/home/lvli/Documents/gitpackages/test/filters.npy", filters)
     # np.save("/home/lvli/Documents/gitpackages/test/image_bp.npy", image_bp)

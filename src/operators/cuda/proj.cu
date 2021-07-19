@@ -29,24 +29,25 @@ __device__ void TOF_dist_proj(float *proj_value, const float *image, const float
     const float y1c = (y1l + y1r) / 2;
     const float x2c = (x2l + x2r) / 2;
     const float y2c = (y2l + y2r) / 2;
-    const float L = sqrtf((x1c - x2c) *(x1c - x2c) + (y1c - y2c) * (y1c - y2c));
-    const float ratio1 = (1 - tof_value / L) / 2;
+    const float L = sqrtf((x1c - x2c) * (x1c - x2c) + (y1c - y2c) * (y1c - y2c));
+    const float ratio1 = (1 - (tof_value / L)) / 2;
 
-    float d2_tof, w_tof;
+    
+
     if (abs(x1c-x2c) > abs(y1c-y2c))
     {
-        for (int ix=0; ix < nx; ix++)
+        for (int ix = 0; ix < nx; ix++)
         {
-            float xc = (ix - nx2+0.5) * dx;
+            float xc = (ix - nx2 + 0.5) * dx;
             float tof_bin = dx;
-            
+            float d2_tof, w_tof;
             
             if (tof_sigma > 0)
             {
                 d2_tof = ((xc-x1c) / (x2c-x1c) - ratio1) * L;
                 if (d2_tof <= (3 * tof_sigma))
                 {
-                    w_tof = expf(-0.5*d2_tof*d2_tof/tof_sigma_2)/sqrtf(2.0*PI*tof_sigma_2)*tof_bin;
+                    w_tof = expf(-0.5 * d2_tof * d2_tof / tof_sigma_2) / sqrtf(2.0 * PI * tof_sigma_2 ) * tof_bin;
                 }
                 else
                 {
@@ -58,19 +59,19 @@ __device__ void TOF_dist_proj(float *proj_value, const float *image, const float
                 w_tof = 1.0;
             }
             //d1l-d2r
-            float kylr = (y1l-y2r)/(x1l-x2r);
-            float ylr = kylr*(xc-x1l)+y1l+ny2*dy;
+            float kylr = (y1l - y2r) / (x1l - x2r);
+            float ylr = kylr * (xc - x1l) + y1l + ny2 * dy;
             //d1r-d2l
-            float kyrl = (y1r-y2l)/(x1r-x2l);
-            float yrl = kyrl*(xc-x1r)+y1r+ny2*dy;
+            float kyrl = (y1r - y2l) / (x1r - x2l);
+            float yrl = kyrl * (xc - x1r) + y1r + ny2 * dy;
 
-            float yy1 = fminf(ylr,yrl); // 横坐标为xc时，detector边缘与x轴的交点中y较小值
-            float yy2 = fmaxf(ylr,yrl);
-            int cy1 = (int)floor(yy1/dy);
-            int cy2 = (int)floor(yy2/dy);
-            for (int iy = MAX(0, cy1); iy < MIN(ny, cy2+1); iy++)
+            float yy1 = MIN(ylr,yrl); // 横坐标为xc时，detector边缘与x轴的交点中y较小值
+            float yy2 = MAX(ylr,yrl);
+            int cy1 = (int)floorf(yy1/dy);
+            int cy2 = (int)floorf(yy2/dy);
+            for (int iy = (int)MAX(0, cy1); iy < (int)MIN(ny, cy2+1); iy++)
             {
-                float dist_w = (fminf((iy+1) * dy,yy2)-fmaxf(iy * dy, yy1)) / (yy2-yy1);
+                float dist_w = (MIN((iy+1) * dy,yy2)-MAX(iy * dy, yy1)) / (yy2-yy1);
                 atomicAdd(proj_value, *(image + ix + nx * iy) * dist_w * w_tof);
             }
         }
@@ -82,9 +83,11 @@ __device__ void TOF_dist_proj(float *proj_value, const float *image, const float
         {
             float yc = (iy - ny2 + 0.5) *dy;
             float tof_bin = dy;
+            float d2_tof, w_tof;
+
             if (tof_sigma > 0)
             {
-                d2_tof = ((yc-y1c) / (y2c-y1c) - ratio1)*L;
+                d2_tof = (((yc-y1c) / (y2c-y1c)) - ratio1) * L;
                 if (d2_tof <=3 * tof_sigma)
                 {
                     w_tof = expf(-0.5 * d2_tof * d2_tof / tof_sigma_2) / sqrtf(2.0 * PI * tof_sigma_2) *tof_bin;
@@ -105,15 +108,15 @@ __device__ void TOF_dist_proj(float *proj_value, const float *image, const float
             float kxrl = (x1r-x2l)/(y1r-y2l);
             float xrl = kxrl*(yc-y1r)+x1r+nx2*dx;
             
-            float xx1 = fminf(xlr,xrl);
-            float xx2 = fmaxf(xlr,xrl);
+            float xx1 = MIN(xlr,xrl);
+            float xx2 = MAX(xlr,xrl);
             float cx1 = (int)floor(xx1/dx);
             float cx2 = (int)floor(xx2/dx);
 
             
-            for (int ix= MAX(0, cx1); ix < MIN(nx, cx2+1); ix++)
+            for (int ix= (int)MAX(0, cx1); ix < (int)MIN(nx, cx2+1); ix++)
             {
-                float dist_w = (fminf((ix+1)*dx,xx2) - fmaxf(ix*dx,xx1))/(xx2-xx1);
+                float dist_w = (MIN((ix+1)*dx,xx2) - MAX(ix*dx,xx1))/(xx2-xx1);
                 atomicAdd(proj_value, *(image + ix + nx * iy) * dist_w * w_tof);
             }
         }

@@ -2,8 +2,10 @@ import torch
 import numpy as np
 import math
 import time
+
+# from torch._C import float32       
 from operators.pytorch.online2d.projector import Project, BackProject, BPF, ProjectFunction
-from operators.pytorch.online2d import projector
+# from operators.pytorch.online2d import projector
 
 def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
     
@@ -29,34 +31,55 @@ def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
                     x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
     proj = Project(tof_value, x1l, y1l, x1r, y1r,
                     x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
+    # test bp
     # image_bp = bp(torch_projection)
     # # print(image_bp.size())
     # # print(image_bp.detach().cpu().numpy()[0,0,90:100,90:100])
-    # np.save("/home/lyuli/gitpackages/test_data/bp.npy", np.squeeze(image_bp.detach().cpu().numpy()))
+    # np.save("/home/lyuli/gitpackages/test_data/bp_pytorch.npy", np.squeeze(image_bp.detach().cpu().numpy()))
 
+    # test bpf
     # bpf = BPF(tof_value, x1l, y1l, x1r, y1r,
     #                 x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
     # image_bpf  = bpf(torch_projection)
     # # print(image_bpf.size())
     # np.save("/home/lyuli/gitpackages/test_data/bpf.npy", np.squeeze(image_bpf.detach().cpu().numpy()))
-    iter_num = 10
-    bp_v = np.zeros((iter_num, 200, 200))
-    proj_v =  np.zeros((iter_num, event_num))
     
-    for iter in range(iter_num):
-        torch_bp = bp(torch_projection)
-        torch_projection =  proj(torch_bp)
-        bp_v[iter,:,:]=np.squeeze(torch_bp.detach().cpu().numpy())
-        proj_v[iter,:]=np.squeeze(torch_projection.detach().cpu().numpy())
 
-    np.save("/home/lyuli/gitpackages/test_data/bp_v.npy", bp_v)
-    np.save("/home/lyuli/gitpackages/test_data/proj_v.npy", proj_v)
+    # test proj
+    # proj_v =  np.zeros(event_num)
+    # one_map = torch.ones((200,200)).unsqueeze(0).unsqueeze(0).to(device)
+    # torch_projection =  proj(one_map)
+    # proj_v=np.squeeze(torch_projection.detach().cpu().numpy())
+    # np.save("/home/lyuli/gitpackages/test_data/proj_pytorch.npy", proj_v)
+
+    # test mlem
+    iter_num=3
+    bp_v = torch.ones((iter_num,200,200)).unsqueeze(0).unsqueeze(0).to(device)
+    # proj_v =  torch.tensor(np.zeros((iter_num, event_num)))
+    measured_proj = torch.ones((event_num,1), dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
+    emap = np.fromfile("/home/lyuli/bpf-learning/PET_2nd_simu/emap.bin",dtype=np.float32).reshape(200,200)
+    torch_emap = torch.tensor(emap).unsqueeze(0).unsqueeze(0).to(device)
+    proj_ratio = torch.zeros_like(measured_proj)
+    print(measured_proj.size())
+    for iter in range(iter_num):
+        torch_projection =  proj(bp_v[:,:,iter,:,:])
+        # print(torch_projection[0,0,:,0].size())
+        proj_ratio =  torch.div(measured_proj.float(), torch_projection) #measured_proj[0,0,:,0]/ torch_projection[0,0,:,0] #
+        bp_ratio = bp(proj_ratio)
+        bp_v[:,:,iter+1, :,:] = bp_v[:,:,iter,:,:] / torch_emap * bp_ratio
+        
+    #     # bp_v[iter,:,:]=np.squeeze(torch_bp.detach().cpu().numpy())
+    #     # proj_v[iter,:]=np.squeeze(torch_projection.detach().cpu().numpy())
+
+    np.save("/home/lyuli/gitpackages/test_data/mlem_pytorch.npy", np.squeeze(bp_v.detach().cpu().numpy()))
+    # # np.save("/home/lyuli/gitpackages/test_data/proj_pytorch.npy", proj_v)
 
 
 
 if __name__ == '__main__':
     device = torch.device("cuda:1")
     torch.cuda.set_device(1)
+    # print(torch.__version__)
     data_dir  =  "/home/lyuli/bpf-learning/PET_2nd_simu/xcat_2Dsimu/slice30/sub.6/lors_200ps.npy"
     listmode  = np.load(data_dir)[:50000,:]
     torch_listmode = torch.tensor(listmode).unsqueeze(0).unsqueeze(0)
