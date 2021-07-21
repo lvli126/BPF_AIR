@@ -1,3 +1,4 @@
+from src.operators.pytorch.online2d.projector import BPMapping
 import torch
 import numpy as np
 import math
@@ -31,6 +32,20 @@ def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
                     x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
     proj = Project(tof_value, x1l, y1l, x1r, y1r,
                     x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
+    bpf = BPF(tof_value, x1l, y1l, x1r, y1r,
+                    x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
+    bpmapping = BPMapping(tof_value, 
+                x1l, y1l, x1r, y1r,
+                x2l, y2l, x2r, y2r,
+                time_resolution, dx, dy, nx, ny, event_num, device, s_factor=0.0)
+
+    # test bpmapping
+    image1 = torch.ones((200,200)).unsqueeze(0).unsqueeze(0).to(device) # 用全1作为初始值
+    image2 = bpmapping(image1, torch_projection)
+    np.save("/home/lyuli/gitpackages/test_data/bp_pytorch.npy", np.squeeze(image2.detach().cpu().numpy()))
+
+
+
     # test bp
     # image_bp = bp(torch_projection)
     # # print(image_bp.size())
@@ -38,8 +53,6 @@ def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
     # np.save("/home/lyuli/gitpackages/test_data/bp_pytorch.npy", np.squeeze(image_bp.detach().cpu().numpy()))
 
     # test bpf
-    # bpf = BPF(tof_value, x1l, y1l, x1r, y1r,
-    #                 x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
     # image_bpf  = bpf(torch_projection)
     # # print(image_bpf.size())
     # np.save("/home/lyuli/gitpackages/test_data/bpf.npy", np.squeeze(image_bpf.detach().cpu().numpy()))
@@ -53,28 +66,28 @@ def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
     # np.save("/home/lyuli/gitpackages/test_data/proj_pytorch.npy", proj_v)
 
     # test mlem
-    iter_num=3
-    bp_v = torch.ones((iter_num,200,200)).unsqueeze(0).unsqueeze(0).to(device)
-    # proj_v =  torch.tensor(np.zeros((iter_num, event_num)))
-    measured_proj = torch.ones((event_num,1), dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
-    emap = np.fromfile("/home/lyuli/bpf-learning/PET_2nd_simu/emap.bin",dtype=np.float32).reshape(200,200)
-    torch_emap = torch.tensor(emap).unsqueeze(0).unsqueeze(0).to(device)
-    proj_ratio = torch.zeros_like(measured_proj)
-    print(measured_proj.size())
-    for iter in range(iter_num):
-        torch_projection =  proj(bp_v[:,:,iter,:,:])
-        # print(torch_projection[0,0,:,0].size())
-        proj_ratio =  torch.div(measured_proj.float(), torch_projection) #measured_proj[0,0,:,0]/ torch_projection[0,0,:,0] #
-        bp_ratio = bp(proj_ratio)
-        bp_v[:,:,iter+1, :,:] = bp_v[:,:,iter,:,:] / torch_emap * bp_ratio
+    # iter_num=3
+    # bp_v = torch.ones((iter_num,200,200)).unsqueeze(0).unsqueeze(0).to(device)
+    # # proj_v =  torch.tensor(np.zeros((iter_num, event_num)))
+    # measured_proj = torch.ones((event_num,1), dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
+    # emap = np.fromfile("/home/lyuli/bpf-learning/PET_2nd_simu/emap.bin",dtype=np.float32).reshape(200,200)
+    # torch_emap = torch.tensor(emap).unsqueeze(0).unsqueeze(0).to(device)
+    # proj_ratio = torch.zeros_like(measured_proj)
+    # print(measured_proj.size())
+    # for iter in range(iter_num):
+    #     torch_projection =  proj(bp_v[:,:,iter,:,:])
+    #     # print(torch_projection[0,0,:,0].size())
+    #     proj_ratio =  torch.div(measured_proj.float(), torch_projection) #measured_proj[0,0,:,0]/ torch_projection[0,0,:,0] #
+    #     bp_ratio = bp(proj_ratio)
+    #     bp_v[:,:,iter+1, :,:] = bp_v[:,:,iter,:,:] / torch_emap * bp_ratio
         
-    #     # bp_v[iter,:,:]=np.squeeze(torch_bp.detach().cpu().numpy())
-    #     # proj_v[iter,:]=np.squeeze(torch_projection.detach().cpu().numpy())
+    # #     # bp_v[iter,:,:]=np.squeeze(torch_bp.detach().cpu().numpy())
+    # #     # proj_v[iter,:]=np.squeeze(torch_projection.detach().cpu().numpy())
 
-    np.save("/home/lyuli/gitpackages/test_data/mlem_pytorch.npy", np.squeeze(bp_v.detach().cpu().numpy()))
+    # np.save("/home/lyuli/gitpackages/test_data/mlem_pytorch.npy", np.squeeze(bp_v.detach().cpu().numpy()))
     # # np.save("/home/lyuli/gitpackages/test_data/proj_pytorch.npy", proj_v)
 
-
+    
 
 if __name__ == '__main__':
     device = torch.device("cuda:1")
