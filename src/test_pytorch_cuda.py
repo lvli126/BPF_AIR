@@ -1,15 +1,21 @@
-from src.operators.pytorch.online2d.projector import BPMapping
+
 import torch
 import numpy as np
 import math
 import time
 
 # from torch._C import float32       
-from operators.pytorch.online2d.projector import Project, BackProject, BPF, ProjectFunction
+from operators.pytorch.online2d.projector import Project, BackProject, BPF, BpMapping
+from pet_data.paras import Listmode, ImagePara
 # from operators.pytorch.online2d import projector
 
 def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
     
+    event_num = torch.tensor(torch_listmode.size()[2]).to(device)
+    dx,  dy = pixel_size[0], pixel_size[1]
+    nx, ny = image_grid[0], image_grid[1]
+
+    torch_listmode = torch_listmode.to(device)
     tof_value = 2*torch_listmode[0,0,:, 8]
     x1l = torch_listmode[0,0,:, 0]
     y1l = torch_listmode[0,0,:, 1]
@@ -19,38 +25,39 @@ def test_tof2d(torch_listmode, time_resolution, pixel_size, image_grid, device):
     y2l = torch_listmode[0,0,:, 5]
     x2r = torch_listmode[0,0,:, 6]
     y2r = torch_listmode[0,0,:, 7]
-    dx,  dy = pixel_size[0], pixel_size[1]
-    nx, ny = image_grid[0], image_grid[1]
-    event_num = torch_listmode.size()[2]
+    listmode = Listmode(tof_value, 
+                        x1l, y1l, x1r, y1r, x2l, y2l, x2r, y2r, 
+                        time_resolution.to(device), event_num)
+
+    image_para = ImagePara(dx,dy, nx, ny)
     torch_projection = torch.ones(event_num).unsqueeze(0).unsqueeze(0).to(device)
+    s_factor=0.3
     # torch_projection =  torch.tensor(torch_projection, device = device)
     # print(torch_listmode.size())
     # print(torch_projection.size())
     # print(x1l.size())
 
-    bp = BackProject(tof_value, x1l, y1l, x1r, y1r,
-                    x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
-    proj = Project(tof_value, x1l, y1l, x1r, y1r,
-                    x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
-    bpf = BPF(tof_value, x1l, y1l, x1r, y1r,
-                    x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
-    bpmapping = BPMapping(tof_value, 
-                x1l, y1l, x1r, y1r,
-                x2l, y2l, x2r, y2r,
-                time_resolution, dx, dy, nx, ny, event_num, device, s_factor=0.0)
+    # bp = BackProject(tof_value, x1l, y1l, x1r, y1r,
+    #                 x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
+    # proj = Project(tof_value, x1l, y1l, x1r, y1r,
+    #                 x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
+    # bpf = BPF(tof_value, x1l, y1l, x1r, y1r,
+    #                 x2l, y2l, x2r, y2r, time_resolution, dx, dy, nx, ny, event_num, device)
+    # bpmapping = BpMapping(s_factor, image_para, device)
 
-    # test bpmapping
-    image1 = torch.ones((200,200)).unsqueeze(0).unsqueeze(0).to(device) # 用全1作为初始值
-    image2 = bpmapping(image1, torch_projection)
-    np.save("/home/lyuli/gitpackages/test_data/bp_pytorch.npy", np.squeeze(image2.detach().cpu().numpy()))
-
-
+    # # test bpmapping
+    
+    # image1 = torch.ones((200,200)).unsqueeze(0).unsqueeze(0).to(device) # 用全1作为初始值
+    # image2 = bpmapping(image1, torch_projection, listmode)
+    # print(listmode.event_num)
+    # np.save("/home/lyuli/gitpackages/test_data/image2_pytorch2.npy", np.squeeze(image2.detach().cpu().numpy()))
 
     # test bp
-    # image_bp = bp(torch_projection)
+    bp = BackProject(image_para, device)
+    image_bp = bp(listmode, torch_projection)
     # # print(image_bp.size())
     # # print(image_bp.detach().cpu().numpy()[0,0,90:100,90:100])
-    # np.save("/home/lyuli/gitpackages/test_data/bp_pytorch.npy", np.squeeze(image_bp.detach().cpu().numpy()))
+    np.save("/home/lyuli/gitpackages/test_data/bp_pytorch2.npy", np.squeeze(image_bp.detach().cpu().numpy()))
 
     # test bpf
     # image_bpf  = bpf(torch_projection)
