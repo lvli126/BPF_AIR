@@ -29,6 +29,7 @@ class AirNet2d(nn.Module):
         x = x0.detach().clone().to(self.device)
         for i, (recon_layer, conv_seq) in enumerate(zip(self.recon_layers, self.conv_seqs)):
             x_1_2, y = recon_layer(x, projection_data, listmode)
+            # print(x_1_2.shape)
             if i ==0:
                 dense = x_1_2
             else:

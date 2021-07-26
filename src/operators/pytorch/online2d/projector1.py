@@ -200,7 +200,7 @@ class BPF(torch.nn.Module):
 # the combination modules: x^(n+1/2) = x^(n) - s*BPF((Ax^(n) - y))
 #####################################################################
 
-class BpMappingFunction(function):
+class BpMappingFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, s_factor, image, projection_data, tof_value, 
                 x1l, y1l, x1r, y1r, x2l, y2l, x2r, y2r,

@@ -13,4 +13,5 @@ class ReconLayer(nn.Module):
 
     def forward(self, image, projection_data, listmode):
         image_new = self.recon_layer(image, projection_data, listmode)
+        # print('image_new', image_new.shape)
         return image_new, projection_data

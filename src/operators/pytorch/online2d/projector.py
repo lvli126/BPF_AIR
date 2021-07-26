@@ -56,10 +56,10 @@ class BackProjectFunction(torch.autograd.Function):
         ctx.y1l = y1l
         ctx.x1r = x1r
         ctx.y1r = y1r
-        ctx.x2l = x1l
-        ctx.y2l = y1l
-        ctx.x2r = x1r
-        ctx.y2r = y1r
+        ctx.x2l = x2l
+        ctx.y2l = y2l
+        ctx.x2r = x2r
+        ctx.y2r = y2r
         ctx.time_resolution = time_resolution
         ctx.dx = dx
         ctx.dy = dy
@@ -187,7 +187,6 @@ class BpMappingFunction(torch.autograd.Function):
                                             x1l, y1l, x1r, y1r,
                                             x2l, y2l, x2r, y2r,
                                             time_resolution, dx, dy, nx, ny, event_num)
-
         projection_diff = projection_new - projection_data
 
         # A-transpose
@@ -197,6 +196,7 @@ class BpMappingFunction(torch.autograd.Function):
                                             time_resolution, dx, dy, nx, ny, event_num)
         s_diff = torch.mul(back_diff, s_factor)
         result = image - s_diff
+        # print(image.shape, s_diff.shape)
         ctx.save_for_backward(s_factor, back_diff, tof_value, 
                               x1l, y1l, x1r, y1r, x2l, y2l, x2r, y2r,
                               time_resolution, dx, dy, nx, ny, event_num)
@@ -217,10 +217,12 @@ class BpMappingFunction(torch.autograd.Function):
                                           x1l, y1l, x1r, y1r,
                                           x2l, y2l, x2r, y2r,
                                           time_resolution, dx, dy, nx, ny, event_num)
-        
-        grad_input = grad_output - torch.mul(grad_image.contiguous(), s_factor)
-        grad_s = - torch.sum(torch.sum(torch.sum(torch.sum(torch.mul(back_diff, grad_output), -1),-1),-1),-1) / (grad_image.shape[0])
-        return grad_input, grad_s
+        # print(grad_output.shape, grad_image.shape,s_factor.shape)
+        grad_input = grad_output - torch.mul(grad_image, s_factor)
+
+        grad_s = - torch.sum(torch.sum(torch.sum(torch.mul(back_diff, grad_output), -1),-1),-1) / (grad_image.shape[0])
+        # print(grad_s.shape)
+        return grad_s, grad_input, None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
 
 class BpMapping(torch.nn.Module):
     def __init__(self,s_factor,image_para, cuda_device):

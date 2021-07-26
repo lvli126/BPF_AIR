@@ -14,7 +14,7 @@ from pet_data.paras import Listmode
 # 2: ssim 调用torch自带包
 
 def psnr(y_predb, yb):
-    from psnr import psnr
+    from .psnr import psnr
     
     psnr_sum = 0.0
     for i_slice in range(yb.shape[0]):
@@ -46,19 +46,21 @@ def validation(model, loss_fn, valid_dataloaders, batch_size, initial_image, dev
             listmode_data, projection_data, ground_truth, slice_num, time_resolution, counts = data
 
             # 将tensor移动到配置好的设备上（GPU）
-            listmode_data = listmode_data.to(device)
+            projection_data = projection_data.to(device)
             labels = ground_truth.to(device)
             time_resolution = time_resolution.to(device)
             counts = counts.to(device)
+            tof_value = listmode_data[:,:,:,8]*2
+            
             
             # 将listmode封装成Listmode类，便于传输
-            listmodes = Listmode(listmode_data[:,:,:,8],
-                                listmode_data[:,:,:,0],listmode_data[:,:,:,1],listmode_data[:,:,:,2],listmode_data[:,:,:,3],
-                                listmode_data[:,:,:,4],listmode_data[:,:,:,5],listmode_data[:,:,:,6],listmode_data[:,:,:,7],
+            listmodes = Listmode(tof_value.to(device),
+                                listmode_data[:,:,:,0].to(device),listmode_data[:,:,:,1].to(device),listmode_data[:,:,:,2].to(device),listmode_data[:,:,:,3].to(device),
+                                listmode_data[:,:,:,4].to(device),listmode_data[:,:,:,5].to(device),listmode_data[:,:,:,6].to(device),listmode_data[:,:,:,7].to(device),
                                 time_resolution, counts)
 
             # 预测
-            outputs = model(initial_image, projection_data, listmodes)
+            outputs,_ = model(initial_image, projection_data, listmodes)
             loss = loss_fn(outputs, labels)
 
             # calculate metrics
@@ -76,19 +78,21 @@ def training(model, loss_fn, optimizer, train_dataloaders, batch_size, initial_i
         listmode_data, projection_data, ground_truth, slice_num, time_resolution, counts = data
 
         # 将tensor移动到配置好的设备上（GPU）
-        listmode_data = listmode_data.to(device)
+        projection_data = projection_data.to(device)
         labels = ground_truth.to(device)
         time_resolution = time_resolution.to(device)
         counts = counts.to(device)
-        
+        tof_value = listmode_data[:,:,:,8]*2
         # 将listmode封装成Listmode类，便于传输
-        listmodes = Listmode(listmode_data[:,:,:,8],
-                            listmode_data[:,:,:,0],listmode_data[:,:,:,1],listmode_data[:,:,:,2],listmode_data[:,:,:,3],
-                            listmode_data[:,:,:,4],listmode_data[:,:,:,5],listmode_data[:,:,:,6],listmode_data[:,:,:,7],
+        listmodes = Listmode(tof_value.to(device),
+                            listmode_data[:,:,:,0].to(device),listmode_data[:,:,:,1].to(device),listmode_data[:,:,:,2].to(device),listmode_data[:,:,:,3].to(device),
+                            listmode_data[:,:,:,4].to(device),listmode_data[:,:,:,5].to(device),listmode_data[:,:,:,6].to(device),listmode_data[:,:,:,7].to(device),
                             time_resolution, counts)
 
+
         # 前向传播
-        outputs = model(initial_image, projection_data, listmodes)
+        outputs,_= model(initial_image, projection_data, listmodes)
+        # print(outputs.size(), labels.size())
         loss = loss_fn(outputs, labels)
 
         # 反向传播和optimization
@@ -103,7 +107,7 @@ def training(model, loss_fn, optimizer, train_dataloaders, batch_size, initial_i
 
 def train_loop(epoch_start, epoch_num, model, loss_fn, optimizer, 
                train_dataloaders, valid_dataloaders, batch_size, initial_image,
-               lr_para, save_model_interval, result_path, device):
+               lr_para, save_model_interval, result_path, device, writer):
     
     for epoch in tqdm(range(epoch_start, int(epoch_start + epoch_num))):
         
@@ -120,6 +124,7 @@ def train_loop(epoch_start, epoch_num, model, loss_fn, optimizer,
         #####################
         #画图
         #####################
+
         writer.add_scalars('MSE loss',{"train": avg_train_loss, "valid": avg_valid_loss},epoch)
         
         # writer.add_scalar('ssim',ssim_value,epoch)
@@ -148,14 +153,15 @@ def train(train_dir_para,valid_dir_para, network_init_para, initial_image,
     train_dataloaders = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_dataloaders = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
-    model = AirNet2d(network_init_para)
+    model = AirNet2d(network_init_para).to(device)
     loss_fn = nn.MSELoss(reduction='mean')
     
     optimizer = optim.Adam(model.parameters(),lr=lr_para.init_lr)
     epoch_start = 0
+    writer = SummaryWriter()
     train_loop(epoch_start, epoch_num, model, loss_fn, optimizer, 
             train_dataloaders, valid_dataloaders, batch_size, initial_image,
-            lr_para, save_model_interval, result_path, device)
+            lr_para, save_model_interval, result_path, device, writer)
 
     
 def re_train(train_dir_para,valid_dir_para, network_init_para, initial_image, 
@@ -167,7 +173,7 @@ def re_train(train_dir_para,valid_dir_para, network_init_para, initial_image,
     train_dataloaders = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_dataloaders = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
-    model = AirNet2d(network_init_para)
+    model = AirNet2d(network_init_para).to(device)
     load_model = torch.load(model_path)  
     model.load_state_dict(load_model['model_state_dict'])
     epoch_start = load_model['epoch']
@@ -189,7 +195,7 @@ def test(test_dir_para,network_init_para, initial_image, model_path, epoch_index
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    model = AirNet2d(network_init_para)
+    model = AirNet2d(network_init_para).to(device)
     load_model = torch.load(model_path)  
     model.load_state_dict(load_model['model_state_dict'])
     model.eval()
@@ -199,15 +205,15 @@ def test(test_dir_para,network_init_para, initial_image, model_path, epoch_index
             listmode_data, projection_data, ground_truth, slice_num, time_resolution, counts = data
 
             # 将tensor移动到配置好的设备上（GPU）
-            listmode_data = listmode_data.to(device)
+            listmode_data = listmode_data
             labels = ground_truth.to(device)
             time_resolution = time_resolution.to(device)
             counts = counts.to(device)
-            
+            tof_value = listmode_data[:,:,:,8]*2
             # 将listmode封装成Listmode类，便于传输
-            listmodes = Listmode(listmode_data[:,:,:,8],
-                                listmode_data[:,:,:,0],listmode_data[:,:,:,1],listmode_data[:,:,:,2],listmode_data[:,:,:,3],
-                                listmode_data[:,:,:,4],listmode_data[:,:,:,5],listmode_data[:,:,:,6],listmode_data[:,:,:,7],
+            listmodes = Listmode(tof_value.to(device),
+                                listmode_data[:,:,:,0].to(device),listmode_data[:,:,:,1].to(device),listmode_data[:,:,:,2].to(device),listmode_data[:,:,:,3].to(device),
+                                listmode_data[:,:,:,4].to(device),listmode_data[:,:,:,5].to(device),listmode_data[:,:,:,6].to(device),listmode_data[:,:,:,7].to(device),
                                 time_resolution, counts)
 
             # 预测

@@ -21,7 +21,7 @@ class ConvSequence(nn.Module):
         self.mid_blocks = nn.ModuleList(
             [SingleConv(mid_channels, mid_channels, kernel_size) for i in range(num_blocks)]
         )
-        self.out_conv = nn.Conv2d(mid_channels, out_channels, kernel_size)
+        self.out_conv = nn.Conv2d(mid_channels, out_channels, kernel_size, padding=1)
         # 也可以换成带relu的卷积
         # self.out_conv = SingleConv(mid_channels, out_channels, kernel_size)
     

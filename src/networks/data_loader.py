@@ -68,23 +68,24 @@ class MyTrainData(data.Dataset):
         ground_truth = np.fromfile(gt_dir,dtype=np.uint16).reshape(self.gt_shape).astype(np.float32) # ground_truth size为100x200
         ground_truth = np.pad(ground_truth, self.padding_for_gt, 'constant', constant_values=(0, 0))# zero-padding to resize gt as 400x400
         # load listmode
-        listmode_data = np.empty([0, 9]) # listmode的shape是列
+        listmode_data = np.empty([0, 9], dtype=np.float32) # listmode的shape是列
         for dir in listmode_dir:
             listmode = np.load(dir)[:per_listmode, :]
             listmode_data = np.vstack((listmode_data, listmode))
 
         # 构造Listmode类，作为listmode输入，需要提前将listmode_data转为torch.tensor
-        listmode_data = torch.from_numpy(listmode_data).unsqueeze(0).unsqueeze(0)
+        # print(listmode_data.shape)
+        listmode_data = torch.from_numpy(listmode_data).unsqueeze(0)
     
         # 构造projection_data, 为每个lor的投影值
-        projection_data = torch.ones(self.counts).unsqueeze(0).unsqueeze(0)
+        projection_data = torch.ones((1, int(self.counts),1), dtype=torch.float32)
 
         ground_truth = ground_truth[np.newaxis,:,:].astype(np.float32)
         ground_truth = torch.from_numpy(ground_truth)
 
         
 
-        return listmode_data, projection_data, ground_truth, slice_num, torch.tensor(self.time_resolution), torch.tensor(self.counts)
+        return listmode_data, projection_data, ground_truth, slice_num, torch.tensor(self.time_resolution, dtype = torch.float32), torch.tensor(self.counts, dtype=torch.int32)
 
     def __len__(self) -> int:
         return len(self.dataset)
